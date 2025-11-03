@@ -15,5 +15,6 @@
   "devDependencies": {
     "bun-types": "latest"
   },
+  "type": "module",
   "module": "src/index.js"
 }
