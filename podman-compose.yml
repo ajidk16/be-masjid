@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    container_name: masjid-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: bismillah
+      POSTGRES_DB: masjid
+    ports:
+      - "5432:5432"
+  adminer:
+    image: adminer
+    container_name: masjid-adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
