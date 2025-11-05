@@ -1,12 +1,19 @@
 import bearer from "@elysiajs/bearer";
 import jwt from "@elysiajs/jwt";
-import Elysia from "elysia";
-import { CreateMemberBody, SignInBody } from "./model";
+import Elysia, { t } from "elysia";
+import { CreateMemberBody, resetPasswordBody, SignInBody } from "./model";
 import {
+  createInvite,
+  createTokenPasswordReset,
   createUser,
   findEmailUnique,
   findPhoneUnique,
   hashPassword,
+  updateEmailVerificationUsedAt,
+  updatePasswordResetUsedAt,
+  updateUserPassword,
+  updateUserVerifiedEmail,
+  verifyEmailToken,
   verifyPassword,
 } from "./service";
 
@@ -15,13 +22,13 @@ export const authController = new Elysia({ prefix: "/auth" })
     jwt({
       secret: process.env.JWT_SECRET!,
       alg: "HS256",
-      exp: "1d", // tokens expire in 1 day
+      exp: "1d",
     })
   )
   .use(bearer())
   .post(
     "/sign-out",
-    async ({ body: { fullName, email, phone, password }, status }) => {
+    async ({ jwt, body: { fullName, email, phone, password }, status }) => {
       const isPhoneUnique = await findPhoneUnique(String(phone));
       if (isPhoneUnique) {
         return status(400, {
@@ -45,8 +52,16 @@ export const authController = new Elysia({ prefix: "/auth" })
         fullName,
         email,
         String(phone),
-        hashedPassword
+        hashedPassword,
+        jwt
       );
+
+      if (!res) {
+        return status(500, {
+          status: 500,
+          message: "Failed to create user",
+        });
+      }
 
       return status(200, {
         status: 200,
@@ -56,6 +71,7 @@ export const authController = new Elysia({ prefix: "/auth" })
           email: res.newUser.email,
           phone: res.newUser.phone,
           fullName: res.newMember.fullName,
+          emailVerificationToken: res.emailVerificationToken,
         },
       });
     },
@@ -63,6 +79,56 @@ export const authController = new Elysia({ prefix: "/auth" })
       body: CreateMemberBody,
     }
   )
+  .get("/verify/:token", async ({ jwt, params: { token }, status }) => {
+    const verified = await jwt.verify(String(token));
+    if (!verified) {
+      return status(400, {
+        status: 400,
+        message: "Invalid or expired token",
+      });
+    }
+
+    const findUser = await findEmailUnique(String(verified.email));
+    if (!findUser) {
+      return status(400, {
+        status: 400,
+        message: "User not found",
+      });
+    }
+
+    const emailVerification = await verifyEmailToken(String(token));
+    if (!emailVerification) {
+      return status(400, {
+        status: 400,
+        message: "Invalid or expired email verification token",
+      });
+    }
+
+    const updatedEmailVerification = await updateEmailVerificationUsedAt(
+      emailVerification.id,
+      new Date()
+    );
+    if (!updatedEmailVerification) {
+      return status(500, {
+        status: 500,
+        message: "Failed to update email verification",
+      });
+    }
+
+    const updatedUser = await updateUserVerifiedEmail(findUser.id);
+    if (!updatedUser) {
+      return status(500, {
+        status: 500,
+        message: "Failed to update user",
+      });
+    }
+
+    return status(200, {
+      status: 200,
+      message: "Token is valid",
+      data: verified,
+    });
+  })
   .post(
     "/sign-in",
     async ({ jwt, body: { email, password }, status }) => {
@@ -129,4 +195,137 @@ export const authController = new Elysia({ prefix: "/auth" })
       message: "User profile data",
       data: verified,
     });
-  });
+  })
+  .post(
+    "/forgot-password",
+    async ({ jwt, body: { email }, status }) => {
+      const existingUser = await findEmailUnique(email);
+      if (!existingUser) {
+        return status(400, {
+          status: 400,
+          message: "Email not found",
+        });
+      }
+
+      const token = await jwt.sign({
+        id: existingUser.id,
+        fullName: existingUser?.members?.fullName,
+        email: existingUser.email,
+        phone: existingUser.phone,
+      });
+
+      const sendTokenToPasswordResetEmail = await createTokenPasswordReset(
+        existingUser.id,
+        String(token)
+      );
+      if (!sendTokenToPasswordResetEmail) {
+        return status(500, {
+          status: 500,
+          message: "Failed to create password reset token",
+        });
+      }
+
+      // send email use resend or other service
+
+      return status(200, {
+        status: 200,
+        message: "Password reset instructions sent to email",
+        data: { token },
+      });
+    },
+    {
+      body: t.Object({
+        email: t.String({ format: "email" }),
+      }),
+    }
+  )
+  .post(
+    "/reset-password",
+    async ({ body: { token, newPassword }, jwt, status }) => {
+      const verified = await jwt.verify(String(token));
+      if (!verified) {
+        return status(400, {
+          status: 400,
+          message: "Invalid or expired token",
+        });
+      }
+
+      const existingUser = await findEmailUnique(String(verified.email));
+      if (!existingUser) {
+        return status(400, {
+          status: 400,
+          message: "User not found",
+        });
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+      const updatedUser = await updateUserPassword(
+        existingUser.id,
+        hashedPassword
+      );
+      if (!updatedUser) {
+        return status(500, {
+          status: 500,
+          message: "Failed to update password",
+        });
+      }
+
+      await updatePasswordResetUsedAt(String(verified.id), new Date());
+
+      return status(200, {
+        status: 200,
+        message: "Password successfully updated",
+        data: null,
+      });
+    },
+    {
+      body: resetPasswordBody,
+    }
+  )
+  .post(
+    "/members/invite",
+    async ({ jwt, body: { mosqueId, email, roleId }, status, bearer }) => {
+      // buatk token di table invite
+      const verified = await jwt.verify(bearer);
+      if (!verified) {
+        return status(401, {
+          status: 401,
+          message: "Invalid token",
+        });
+      }
+
+      const token = await jwt.sign({
+        mosqueId,
+        email,
+        roleId,
+      });
+
+      // simpan ke table invites
+      const invite = await createInvite(
+        mosqueId,
+        email,
+        String(roleId),
+        String(token)
+      );
+      if (!invite) {
+        return status(500, {
+          status: 500,
+          message: "Failed to create invite",
+        });
+      }
+
+      return status(200, {
+        status: 200,
+        message: "Invite accepted",
+        data: null,
+      });
+    },
+    {
+      body: t.Object({
+        token: t.String(),
+        mosqueId: t.String({ format: "uuid" }),
+        email: t.String({ format: "email" }),
+        roleId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    }
+  );

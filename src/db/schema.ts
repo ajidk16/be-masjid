@@ -3,3 +3,4 @@ export * from "./schema/finance-tables";
 export * from "./schema/marketplace-tables";
 export * from "./schema/ref-tables";
 export * from "./schema/relations";
+export * from "./schema/suppport-tabel";

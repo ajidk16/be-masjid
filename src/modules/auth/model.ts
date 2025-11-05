@@ -13,3 +13,8 @@ export const SignInBody = t.Object({
   password: t.String(),
 });
 export type SignInBody = typeof SignInBody.static;
+
+export const resetPasswordBody = t.Object({
+  token: t.String(),
+  newPassword: t.String({ minLength: 6 }),
+});
