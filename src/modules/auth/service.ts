@@ -1,3 +1,4 @@
+import { Resend } from "resend";
 import { db } from "../../db/client";
 import {
   emailVerifications,
@@ -7,6 +8,8 @@ import {
   users,
 } from "../../db/schema";
 import { eq } from "drizzle-orm";
+import OtpEmail from "../../emails/otp";
+import { sendEmailToGmail } from "../../lib/shared/send-email";
 
 export const createUser = async (
   fullName: string,
@@ -41,18 +44,17 @@ export const createUser = async (
       phone: newUser.phone,
     });
 
-    const emailVerification = await tx.insert(emailVerifications).values({
-      userId: newUser.id,
-      token: String(token),
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      usedAt: null,
-    });
+    const [emailVerification] = await tx
+      .insert(emailVerifications)
+      .values({
+        userId: newUser.id,
+        token: String(token),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        usedAt: null,
+      })
+      .returning();
 
-    console.log("list emailVerification", {
-      newUser,
-      newMember,
-      emailVerification,
-    });
+    console.log("emailVerification", emailVerification);
 
     return {
       newUser: {
@@ -64,7 +66,10 @@ export const createUser = async (
         id: newMember.id,
         fullName: newMember.fullName,
       },
-      emailVerificationToken: emailVerification,
+      emailVerificationToken: {
+        token: emailVerification.token,
+        expiresAt: emailVerification.expiresAt,
+      },
     };
   });
 
@@ -139,7 +144,7 @@ export const createInvite = async (
       email,
       roleId,
       token,
-      expiresAt: new Date(Date.now() + 60 * 60 * 24 * 7), // 7 days
+      expiresAt: new Date(Date.now() + 60 * 60 * 24 * 1), // 1 day
       acceptedAt: null,
     })
     .returning();

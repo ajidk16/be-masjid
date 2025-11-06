@@ -1,7 +1,12 @@
 import bearer from "@elysiajs/bearer";
 import jwt from "@elysiajs/jwt";
 import Elysia, { t } from "elysia";
-import { CreateMemberBody, resetPasswordBody, SignInBody } from "./model";
+import {
+  CreateMemberBody,
+  InviteMemberBody,
+  resetPasswordBody,
+  SignInBody,
+} from "./model";
 import {
   createInvite,
   createTokenPasswordReset,
@@ -16,6 +21,7 @@ import {
   verifyEmailToken,
   verifyPassword,
 } from "./service";
+import { sendEmailToGmail } from "../../lib/shared/send-email";
 
 export const authController = new Elysia({ prefix: "/auth" })
   .use(
@@ -28,7 +34,14 @@ export const authController = new Elysia({ prefix: "/auth" })
   .use(bearer())
   .post(
     "/sign-out",
-    async ({ jwt, body: { fullName, email, phone, password }, status }) => {
+    async ({
+      jwt,
+      body: { fullName, email, phone, password },
+      status,
+      headers,
+    }) => {
+      // console.log("headers", headers['host']);
+      // return ;
       const isPhoneUnique = await findPhoneUnique(String(phone));
       if (isPhoneUnique) {
         return status(400, {
@@ -63,6 +76,15 @@ export const authController = new Elysia({ prefix: "/auth" })
         });
       }
 
+      // send email use resend or other service
+      await sendEmailToGmail({
+        email: res.newUser.email,
+        subject: "Verifikasi Email Akun Masjid Digital",
+        expiresInMin: "1 jam",
+        verifyUrl: `${process.env.FRONTEND_URL}/verify-email?token=${res.emailVerificationToken.token}`,
+        logoUrl: "https://masjid.id/logo.png",
+      });
+
       return status(200, {
         status: 200,
         message: "Successfully signed out",
@@ -71,7 +93,10 @@ export const authController = new Elysia({ prefix: "/auth" })
           email: res.newUser.email,
           phone: res.newUser.phone,
           fullName: res.newMember.fullName,
-          emailVerificationToken: res.emailVerificationToken,
+          emailVerificationToken: {
+            token: res.emailVerificationToken.token,
+            expiresAt: res.emailVerificationToken.expiresAt,
+          },
         },
       });
     },
@@ -174,28 +199,6 @@ export const authController = new Elysia({ prefix: "/auth" })
       body: SignInBody,
     }
   )
-  .get("/profile", async ({ jwt, status, bearer }) => {
-    if (!bearer) {
-      return status(401, {
-        status: 401,
-        message: "Token not provided",
-      });
-    }
-
-    const verified = await jwt.verify(bearer);
-    if (!verified) {
-      return status(401, {
-        status: 401,
-        message: "Invalid token",
-      });
-    }
-
-    return status(200, {
-      status: 200,
-      message: "User profile data",
-      data: verified,
-    });
-  })
   .post(
     "/forgot-password",
     async ({ jwt, body: { email }, status }) => {
@@ -226,6 +229,12 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
 
       // send email use resend or other service
+      await sendEmailToGmail({
+        email: existingUser.email,
+        subject: "Password Reset Instructions",
+        expiresInMin: "1 day",
+        verifyUrl: `${process.env.URL_FRONTEND}/reset-password?token=${token}`,
+      });
 
       return status(200, {
         status: 200,
@@ -314,6 +323,15 @@ export const authController = new Elysia({ prefix: "/auth" })
         });
       }
 
+      // kirim email undangan pakai resend atau layanan lain
+      await sendEmailToGmail({
+        email: invite.email,
+        subject: "Undangan Bergabung sebagai Member",
+        expiresInMin: "1 jam",
+        verifyUrl: `${process.env.FRONTEND_URL}/invite/accept?token=${invite.token}`,
+        logoUrl: "https://masjid.id/logo.png",
+      });
+
       return status(200, {
         status: 200,
         message: "Invite accepted",
@@ -321,11 +339,69 @@ export const authController = new Elysia({ prefix: "/auth" })
       });
     },
     {
+      body: InviteMemberBody,
+    }
+  )
+  .post(
+    "/members/accept",
+    async ({ jwt, body: { token }, status }) => {
+      const verified = await jwt.verify(String(token));
+      if (!verified) {
+        return status(400, {
+          status: 400,
+          message: "Invalid or expired token",
+        });
+      }
+
+      console.log("verified", verified);
+
+      // lanjutkan proses penerimaan undangan, seperti membuat user atau menambahkan ke mosque
+      // const newUser = await createUser({
+      //   email: verified.email,
+      //   mosqueId: verified.mosqueId,
+      //   roleId: verified.roleId,
+      //   phone: "",
+
+      // });
+
+      // if (!newUser) {
+      //   return status(500, {
+      //     status: 500,
+      //     message: "Failed to accept invite",
+      //   });
+      // }
+
+      return status(200, {
+        status: 200,
+        message: "Invite accepted successfully",
+        data: null,
+      });
+    },
+    {
       body: t.Object({
         token: t.String(),
-        mosqueId: t.String({ format: "uuid" }),
-        email: t.String({ format: "email" }),
-        roleId: t.Optional(t.String({ format: "uuid" })),
       }),
     }
-  );
+  )
+  .get("/profile", async ({ jwt, status, bearer }) => {
+    if (!bearer) {
+      return status(401, {
+        status: 401,
+        message: "Token not provided",
+      });
+    }
+
+    const verified = await jwt.verify(bearer);
+    if (!verified) {
+      return status(401, {
+        status: 401,
+        message: "Invalid token",
+      });
+    }
+
+    return status(200, {
+      status: 200,
+      message: "User profile data",
+      data: verified,
+    });
+  });

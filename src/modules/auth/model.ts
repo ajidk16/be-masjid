@@ -18,3 +18,12 @@ export const resetPasswordBody = t.Object({
   token: t.String(),
   newPassword: t.String({ minLength: 6 }),
 });
+
+export const InviteMemberBody = t.Object({
+  token: t.String(),
+  mosqueId: t.String({ format: "uuid" }),
+  email: t.String({ format: "email" }),
+  roleId: t.Optional(t.String({ format: "uuid" })),
+});
+
+export type InviteMemberBody = typeof InviteMemberBody.static;
