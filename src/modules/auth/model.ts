@@ -16,7 +16,7 @@ export type SignInBody = typeof SignInBody.static;
 
 export const resetPasswordBody = t.Object({
   token: t.String(),
-  newPassword: t.String({ minLength: 6 }),
+  newPassword: t.String(),
 });
 
 export const InviteMemberBody = t.Object({

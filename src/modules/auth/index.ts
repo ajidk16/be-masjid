@@ -12,6 +12,7 @@ import {
   createTokenPasswordReset,
   createUser,
   findEmailUnique,
+  findMembership,
   findPhoneUnique,
   hashPassword,
   updateEmailVerificationUsedAt,
@@ -34,14 +35,7 @@ export const authController = new Elysia({ prefix: "/auth" })
   .use(bearer())
   .post(
     "/sign-out",
-    async ({
-      jwt,
-      body: { fullName, email, phone, password },
-      status,
-      headers,
-    }) => {
-      // console.log("headers", headers['host']);
-      // return ;
+    async ({ jwt, body: { fullName, email, phone, password }, status }) => {
       const isPhoneUnique = await findPhoneUnique(String(phone));
       if (isPhoneUnique) {
         return status(400, {
@@ -158,13 +152,14 @@ export const authController = new Elysia({ prefix: "/auth" })
     "/sign-in",
     async ({ jwt, body: { email, password }, status }) => {
       const existingUser = await findEmailUnique(String(email));
-      console.log(existingUser);
       if (!existingUser) {
         return status(400, {
           status: 400,
           message: "Invalid email",
         });
       }
+
+      const membership = await findMembership(existingUser.id);
 
       const isPasswordValid = await verifyPassword(
         password,
@@ -177,8 +172,6 @@ export const authController = new Elysia({ prefix: "/auth" })
         });
       }
 
-      console.log("user", existingUser);
-
       const token = await jwt.sign({
         id: existingUser.id,
         fullName: existingUser?.members?.fullName,
@@ -189,9 +182,12 @@ export const authController = new Elysia({ prefix: "/auth" })
       return status(200, {
         status: 200,
         message: "Successfully signed in",
-        data: {
-          token,
-          expiresIn: "1 day",
+        token: token,
+        user: existingUser,
+        membership: {
+          mosqueId: membership?.mosqueId,
+          roleId: membership?.roleId,
+          slug: membership?.mosque?.slug,
         },
       });
     },
@@ -212,9 +208,7 @@ export const authController = new Elysia({ prefix: "/auth" })
 
       const token = await jwt.sign({
         id: existingUser.id,
-        fullName: existingUser?.members?.fullName,
         email: existingUser.email,
-        phone: existingUser.phone,
       });
 
       const sendTokenToPasswordResetEmail = await createTokenPasswordReset(
@@ -233,7 +227,7 @@ export const authController = new Elysia({ prefix: "/auth" })
         email: existingUser.email,
         subject: "Password Reset Instructions",
         expiresInMin: "1 day",
-        verifyUrl: `${process.env.URL_FRONTEND}/reset-password?token=${token}`,
+        verifyUrl: `${process.env.URL_FRONTEND}/auth/reset-password?token=${token}`,
       });
 
       return status(200, {
@@ -353,23 +347,25 @@ export const authController = new Elysia({ prefix: "/auth" })
         });
       }
 
-      console.log("verified", verified);
+      // return { verified };
 
       // lanjutkan proses penerimaan undangan, seperti membuat user atau menambahkan ke mosque
-      // const newUser = await createUser({
-      //   email: verified.email,
-      //   mosqueId: verified.mosqueId,
-      //   roleId: verified.roleId,
-      //   phone: "",
+      const newUser = await createUser(
+        "user from invite", // fullName
+        String(verified.email),
+        "0000000000", // phone
+        "temporaryPassword", // password
+        jwt,
+        String(verified.roleId),
+        String(verified.mosqueId)
+      );
 
-      // });
-
-      // if (!newUser) {
-      //   return status(500, {
-      //     status: 500,
-      //     message: "Failed to accept invite",
-      //   });
-      // }
+      if (!newUser) {
+        return status(500, {
+          status: 500,
+          message: "Failed to accept invite",
+        });
+      }
 
       return status(200, {
         status: 200,

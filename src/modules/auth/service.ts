@@ -1,4 +1,3 @@
-import { Resend } from "resend";
 import { db } from "../../db/client";
 import {
   emailVerifications,
@@ -7,16 +6,16 @@ import {
   passwordResets,
   users,
 } from "../../db/schema";
-import { eq } from "drizzle-orm";
-import OtpEmail from "../../emails/otp";
-import { sendEmailToGmail } from "../../lib/shared/send-email";
+import { and, eq } from "drizzle-orm";
 
 export const createUser = async (
   fullName: string,
   email: string,
   phone: string,
   password: string,
-  jwt: any
+  jwt: any,
+  roles?: string,
+  mosqueId?: string
 ) => {
   const result = await db.transaction(async (tx) => {
     const [newUser] = await tx
@@ -34,6 +33,8 @@ export const createUser = async (
         userId: newUser.id,
         fullName,
         isActive: false,
+        roleId: roles ? roles : null,
+        mosqueId: mosqueId ? mosqueId : null,
       })
       .returning();
 
@@ -53,8 +54,6 @@ export const createUser = async (
         usedAt: null,
       })
       .returning();
-
-    console.log("emailVerification", emailVerification);
 
     return {
       newUser: {
@@ -229,6 +228,16 @@ export const findEmailUnique = async (email: string) => {
     where: eq(users.email, email),
   });
   return existingUser;
+};
+
+export const findMembership = async (userId: string) => {
+  const membership = await db.query.members.findFirst({
+    with: {
+      mosque: true,
+    },
+    where: eq(members.userId, userId),
+  });
+  return membership;
 };
 
 export const getUserProfile = async (userId: string) => {
