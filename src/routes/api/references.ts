@@ -5,7 +5,7 @@ import {
   refPaymentStatusController,
   refHalalStatusController,
   refRolesController,
-} from "../../modules/referensi";
+} from "../../modules/references";
 
 export const referenceRoutes = new Elysia({ prefix: "/references" })
   .use(refRolesController)

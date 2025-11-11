@@ -1,3 +1,3 @@
 export * from "./auth";
-export * from "./mosques";
-export * from "./members";
+export * from "./mosque"
+export * from "./references"

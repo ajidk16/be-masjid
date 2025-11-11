@@ -1,6 +1,6 @@
 import { and, count, eq, ilike, or } from "drizzle-orm";
-import { db } from "../../db/client";
-import { mosques } from "../../db/schema";
+import { db } from "../../../db/client";
+import { mosques } from "../../../db/schema";
 import { listMosquesQuery } from "./model";
 
 export const createMosque = async (

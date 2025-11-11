@@ -1,6 +1,6 @@
 import { count, eq, ilike, or } from "drizzle-orm";
-import { db } from "../../db/client";
-import { members } from "../../db/schema";
+import { db } from "../../../db/client";
+import { members } from "../../../db/schema";
 import { ListMemberQuery } from "./model";
 
 export const createMemberService = async (
