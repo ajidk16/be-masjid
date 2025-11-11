@@ -1,5 +1,11 @@
 import Elysia from "elysia";
-import { createMosque, listMosques, updateMosque } from "./service";
+import {
+  createMosque,
+  deleteMosque,
+  getMosqueById,
+  listMosques,
+  updateMosque,
+} from "./service";
 import { createMosqueBody, listMosquesQuery, updateMosqueBody } from "./model";
 
 export const mosqueController = new Elysia({ prefix: "/mosques" })
@@ -61,6 +67,36 @@ export const mosqueController = new Elysia({ prefix: "/mosques" })
       body: updateMosqueBody,
     }
   )
-  .delete("/:mosqueId", async () => {
-    return { status: 200, message: "Mosque deleted" };
+  .get("/:mosqueId", async ({ params }) => {
+    const { mosqueId } = params;
+    // For demonstration, returning a mock mosque object
+    const mosque = await getMosqueById(mosqueId);
+    if (!mosque) {
+      return {
+        status: 404,
+        message: "Mosque not found",
+      };
+    }
+
+    return {
+      status: 200,
+      message: "Mosque details",
+      data: mosque,
+    };
+  })
+  .delete("/:mosqueId", async ({ params }) => {
+    const { mosqueId } = params;
+    const mosque = await deleteMosque(mosqueId);
+    if (!mosque) {
+      return {
+        status: 404,
+        message: "Mosque not found",
+      };
+    }
+
+    return {
+      status: 200,
+      message: "Mosque deleted",
+      data: mosque,
+    };
   });

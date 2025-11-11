@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { authController } from "./modules/auth";
 import cors from "@elysiajs/cors";
 import { apiRoutes } from "./routes/api";
+import { referenceRoutes } from "./routes/api/references";
 
 const app = new Elysia()
   .use(swagger())
@@ -26,6 +27,7 @@ const app = new Elysia()
     })
   )
   .use(apiRoutes)
+  .group("/api/v1", (app) => app.use(referenceRoutes))
   .compile();
 
 export default app;

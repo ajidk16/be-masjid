@@ -347,9 +347,6 @@ export const authController = new Elysia({ prefix: "/auth" })
         });
       }
 
-      // return { verified };
-
-      // lanjutkan proses penerimaan undangan, seperti membuat user atau menambahkan ke mosque
       const newUser = await createUser(
         "user from invite", // fullName
         String(verified.email),

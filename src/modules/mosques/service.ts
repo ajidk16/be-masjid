@@ -81,3 +81,18 @@ export const updateMosque = async (
 
   return updatedMosque;
 };
+
+export const getMosqueById = async (mosqueId: string) => {
+  const mosque = await db.query.mosques.findFirst({
+    where: eq(mosques.id, mosqueId),
+  });
+  return mosque;
+};
+
+export const deleteMosque = async (mosqueId: string) => {
+  const [deletedMosque] = await db
+    .delete(mosques)
+    .where(eq(mosques.id, mosqueId))
+    .returning();
+  return deletedMosque;
+};
