@@ -4,9 +4,9 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "tsdown src/index.ts -d api --dts",
-    "db:generate": "bunx drizzle-kit generate",
-    "db:migrate": "bunx drizzle-kit migrate",
-    "db:push": "bunx drizzle-kit push",
+    "db:generate": "drizzle-kit generate:pg",
+    "db:migrate": "drizzle-kit migrate:pg",
+    "db:push": "drizzle-kit push:pg",
     "db:pull": "bunx drizzle-kit pull",
     "db:check": "bunx drizzle-kit check",
     "db:up": "bunx drizzle-kit up",
@@ -19,6 +19,7 @@
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/jwt": "^1.4.0",
     "@elysiajs/openapi": "^1.4.11",
+    "@elysiajs/static": "^1.4.6",
     "@elysiajs/swagger": "^1.3.1",
     "@neondatabase/serverless": "^1.0.2",
     "@react-email/components": "^0.5.7",
@@ -33,6 +34,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "resend": "^6.4.1",
+    "sharp": "^0.34.5",
     "tsdown": "^0.15.12",
     "typescript": "^5"
   },

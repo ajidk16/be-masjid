@@ -1,15 +1,18 @@
 import openapi from "@elysiajs/openapi";
 import swagger from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import { authController } from "./modules/auth";
 import cors from "@elysiajs/cors";
 import { apiRoutes } from "./routes/api";
 import { referenceRoutes } from "./routes/api/references";
+import { financeRoutes } from "./routes/api/finance";
+import { berandaRoutes } from "./routes/api/beranda";
+import staticPlugin from "@elysiajs/static";
 
 const app = new Elysia()
   .use(swagger())
   .use(openapi())
   .get("/", () => "Hello Elysia")
+  .use(staticPlugin({ assets: "./public", prefix: "/api/v1" }))
   .use(
     cors({
       origin: "*",
@@ -27,7 +30,9 @@ const app = new Elysia()
     })
   )
   .use(apiRoutes)
-  .group("/api/v1", (app) => app.use(referenceRoutes))
+  .group("/api/v1", (app) =>
+    app.use(referenceRoutes).use(financeRoutes).use(berandaRoutes)
+  )
   .compile();
 
 export default app;

@@ -10,6 +10,7 @@ import {
 import { members, mosques, users } from "./core-tables";
 import { refDonationTypes, refPaymentStatuses } from "./ref-tables";
 
+// rekening dana
 export const fundAccounts = pgTable("fund_accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   mosqueId: uuid("mosque_id").references(() => mosques.id),
