@@ -6,11 +6,7 @@ import {
   listRoles,
   updateRole,
 } from "./service";
-import {
-  createRoleBody,
-  listRoleQuery,
-  updateRoleBody,
-} from "./model";
+import { createRoleBody, listRoleQuery, updateRoleBody } from "./model";
 
 export const refRolesController = new Elysia({ prefix: "/roles" })
   .post(
@@ -56,12 +52,7 @@ export const refRolesController = new Elysia({ prefix: "/roles" })
     "/:roleId",
     async ({ params, body: { code, label, description } }) => {
       const { roleId } = params;
-      const updatedRole = await updateRole(
-        roleId,
-        code,
-        label,
-        description
-      );
+      const updatedRole = await updateRole(roleId, code, label, description);
       return {
         status: 200,
         message: "Role updated",

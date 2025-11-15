@@ -234,6 +234,7 @@ export const findMembership = async (userId: string) => {
   const membership = await db.query.members.findFirst({
     with: {
       mosque: true,
+      role: true,
     },
     where: eq(members.userId, userId),
   });

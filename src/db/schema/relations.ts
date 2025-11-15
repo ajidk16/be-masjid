@@ -6,6 +6,8 @@ import {
   refPaymentStatuses,
   refOrderStatuses,
   refHalalStatuses,
+  refPermissions,
+  refModules,
 } from "./ref-tables";
 import { campaigns, fundAccounts, payments } from "./finance-tables";
 import {
@@ -15,6 +17,17 @@ import {
   halalCertificates,
 } from "./marketplace-tables";
 import { events, mediaPhotos, news } from "./beranda";
+
+export const permissionsRelations = relations(refPermissions, ({ one }) => ({
+  module: one(refModules, {
+    fields: [refPermissions.moduleId],
+    references: [refModules.id],
+  }),
+  role: one(refRoles, {
+    fields: [refPermissions.roleId],
+    references: [refRoles.id],
+  }),
+}));
 
 export const membersRelations = relations(members, ({ one }) => ({
   mosque: one(mosques, {
@@ -69,4 +82,8 @@ export const usersRelations = relations(users, ({ one }) => ({
     fields: [users.id],
     references: [members.userId],
   }),
+}));
+
+export const rolesRelations = relations(refRoles, ({ many }) => ({
+  members: many(members),
 }));

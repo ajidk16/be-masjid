@@ -48,6 +48,8 @@ export const listMembersService = async ({
         columns: {
           email: true,
           phone: true,
+          verifiedEmail: true,
+          createdAt: true,
         },
       },
       role: true,

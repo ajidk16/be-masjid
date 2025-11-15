@@ -1,7 +1,7 @@
 import { and, count, eq, ilike, or } from "drizzle-orm";
 import { db } from "../../../db/client";
 import { listRoleQuery } from "./model";
-import { refRoles } from "../../../db/schema";
+import { members, refPermissions, refRoles } from "../../../db/schema";
 
 export const createRole = async (
   code: string,
@@ -16,6 +16,23 @@ export const createRole = async (
       description,
     })
     .returning();
+
+  const findPermission = await db.query.refRoles.findMany();
+
+  findPermission.map(async (role) => {
+    await db
+      .insert(refPermissions)
+      .values({
+        roleId: newRole.id,
+        moduleId: role.id,
+        canRead: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+        canManage: false,
+      })
+      .returning();
+  });
 
   return newRole;
 };
@@ -36,11 +53,26 @@ export const listRoles = async ({
     );
   }
 
-  const donationList = await db.query.refRoles.findMany({
-    offset: page,
-    limit,
-    where: whereCondition,
-  });
+  // const donationList = await db.query.refRoles.findMany({
+  //   with: {
+  //     members: true,
+  //   },
+  //   offset: page,
+  //   limit,
+  //   where: whereCondition,
+  // });
+
+  const donationList = await db
+    .select({
+      code: refRoles.code,
+      label: refRoles.label,
+      description: refRoles.description,
+      memberCount: count(members.id),
+    })
+    .from(refRoles)
+    .leftJoin(members, eq(refRoles.id, members.roleId))
+    .groupBy(refRoles.id)
+    .orderBy(refRoles.code);
 
   const total =
     (await db.select({ count: count() }).from(refRoles)).at(0)?.count ?? 0;

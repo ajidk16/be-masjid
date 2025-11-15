@@ -3,8 +3,10 @@ import {
   mosques,
   refDonationTypes,
   refHalalStatuses,
+  refModules,
   refOrderStatuses,
   refPaymentStatuses,
+  refPermissions,
   refRoles,
 } from "../../schema";
 
@@ -56,6 +58,52 @@ async function main() {
       name: "Masjid Al-Ikhlas",
     },
   ]);
+
+  await db
+    .insert(refModules)
+    .values([
+      { name: "donations" },
+      { name: "orders" },
+      { name: "products" },
+      { name: "users" },
+      { name: "mosques" },
+      { name: "payments" },
+      { name: "events" },
+      { name: "news" },
+      { name: "media-photos" },
+      { name: "members" },
+      { name: "fund-accounts" },
+      { name: "campaigns" },
+      { name: "expenses" },
+      { name: "roles" },
+    ]);
+
+  const modules = await db.query.refModules.findMany();
+  const findRole = await db.query.refRoles.findMany();
+
+  for (const role of findRole) {
+    for (const module of modules) {
+      if (role.code === "admin") {
+        await db.insert(refPermissions).values({
+          roleId: role.id,
+          moduleId: module.id,
+          canCreate: true,
+          canRead: true,
+          canUpdate: true,
+          canDelete: true,
+        });
+      } else {
+        await db.insert(refPermissions).values({
+          roleId: role.id,
+          moduleId: module.id,
+          canCreate: false,
+          canRead: false,
+          canUpdate: false,
+          canDelete: false,
+        });
+      }
+    }
+  }
 }
 
 main();

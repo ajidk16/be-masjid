@@ -173,21 +173,36 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
 
       const token = await jwt.sign({
-        id: existingUser.id,
+        userId: existingUser.id,
+        mosqueId: membership?.mosque?.id,
+        roleId: membership?.role?.id,
         fullName: existingUser?.members?.fullName,
         email: existingUser.email,
         phone: existingUser.phone,
+        slug: membership?.mosque?.slug,
+        role: membership?.role?.code,
       });
 
       return status(200, {
         status: 200,
         message: "Successfully signed in",
         token: token,
-        user: existingUser,
-        membership: {
-          mosqueId: membership?.mosqueId,
-          roleId: membership?.roleId,
+        fullName: existingUser?.members?.fullName,
+        user: {
+          id: existingUser.id,
+          fullName: existingUser?.members?.fullName,
+          email: existingUser.email,
+          phone: existingUser.phone,
+        },
+        mosque: {
+          id: membership?.mosque?.id,
           slug: membership?.mosque?.slug,
+          name: membership?.mosque?.name,
+        },
+        role: {
+          id: membership?.role?.id,
+          code: membership?.role?.code,
+          label: membership?.role?.label,
         },
       });
     },

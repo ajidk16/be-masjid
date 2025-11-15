@@ -8,7 +8,7 @@ import {
 } from "./service";
 import { createMosqueBody, listMosquesQuery, updateMosqueBody } from "./model";
 
-export const mosqueController = new Elysia({ prefix: "/mosques" })
+export const mosqueController = new Elysia({ prefix: "/mosque" })
   .post(
     "/",
     async ({ body: { slug, name, address, city, province } }) => {
